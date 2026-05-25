@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DressCheck — Compliance Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #0b0b10;
+    --surface:   #111118;
+    --border:    #1e1e2a;
+    --muted:     #3a3a4e;
+    --text:      #e8e8f0;
+    --subtext:   #6b6b88;
+    --maroon:    #8b1a1a;
+    --maroon-lt: #b52a2a;
+    --green:     #16a34a;
+    --green-lt:  #22c55e;
+    --red:       #b91c1c;
+    --red-lt:    #ef4444;
+    --gold:      #c49a1a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ── Background grid ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(139,26,26,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 640px; }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    background: rgba(196,154,26,0.08);
+    border: 1px solid rgba(196,154,26,0.2);
+    padding: 0.3rem 0.75rem;
+    border-radius: 2px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: blink 1.8s ease infinite;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--maroon-lt); }
+
+  .subtitle {
+    margin-top: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--subtext);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Upload zone ── */
+  .upload-card {
+    background: var(--surface);
+    border: 1.5px dashed var(--muted);
+    border-radius: 4px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.6s 0.15s ease both;
+  }
+
+  .upload-card:hover, .upload-card.drag-over {
+    border-color: var(--maroon-lt);
+    background: rgba(139,26,26,0.06);
+  }
+
+  .upload-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 1rem;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(139,26,26,0.12);
+    border: 1px solid rgba(139,26,26,0.25);
+    border-radius: 3px;
+  }
+
+  .upload-icon svg { width: 24px; height: 24px; stroke: var(--maroon-lt); fill: none; }
+
+  .upload-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+  }
+
+  .upload-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--subtext);
+  }
+
+  .upload-card input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* ── Preview ── */
+  .preview-wrap {
+    display: none;
+    margin-top: 1.25rem;
+    position: relative;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .preview-wrap img {
+    width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+    background: #0a0a0f;
+    display: block;
+  }
+
+  /* Scan line animation */
+  .scan-line {
+    display: none;
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--maroon-lt), transparent);
+    animation: scan 1.4s ease-in-out infinite;
+    box-shadow: 0 0 12px var(--maroon-lt);
+  }
+
+  .scanning .scan-line { display: block; }
+
+  /* ── Analyze button ── */
+  .analyze-btn {
+    display: none;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.85rem 1.5rem;
+    background: var(--maroon);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analyze-btn:hover { background: var(--maroon-lt); }
+  .analyze-btn:active { transform: scale(0.99); }
+  .analyze-btn:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+    color: var(--subtext);
+  }
+
+  .analyze-btn.visible { display: block; animation: fadeUp 0.3s ease both; }
+
+  /* ── Result card ── */
+  .result-card {
+    display: none;
+    margin-top: 1.25rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .result-card.visible { display: block; }
+
+  .result-header {
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-header.pass  { background: rgba(22,163,74,0.08); border-bottom-color: rgba(34,197,94,0.2); }
+  .result-header.fail  { background: rgba(185,28,28,0.08); border-bottom-color: rgba(239,68,68,0.2); }
+
+  .result-label {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .pass .result-label  { color: var(--green-lt); }
+  .fail .result-label  { color: var(--red-lt); }
+
+  .result-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    padding: 0.3rem 0.65rem;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .pass .result-badge { background: rgba(34,197,94,0.15); color: var(--green-lt); border: 1px solid rgba(34,197,94,0.3); }
+  .fail .result-badge { background: rgba(239,68,68,0.15); color: var(--red-lt);   border: 1px solid rgba(239,68,68,0.3); }
+
+  .result-stats {
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .stat-item label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    color: var(--subtext);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-item .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  /* Confidence bar */
+  .conf-bar-wrap { margin-top: 0.4rem; }
+
+  .conf-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .conf-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s cubic-bezier(.22,.68,0,1.2);
+    width: 0;
+  }
+
+  .pass .conf-bar-fill { background: var(--green-lt); }
+  .fail .conf-bar-fill { background: var(--red-lt); }
+
+  /* ── Reset button ── */
+  .reset-btn {
+    display: block;
+    width: calc(100% - 3rem);
+    margin: 0 1.5rem 1.25rem;
+    padding: 0.6rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--subtext);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .reset-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 3rem;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--subtext);
+    letter-spacing: 0.05em;
+    line-height: 1.8;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  footer span { color: var(--muted); }
+
+  /* ── Error toast ── */
+  .toast {
+    display: none;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(185,28,28,0.12);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--red-lt);
+  }
+
+  .toast.visible { display: block; animation: fadeUp 0.3s ease both; }
+
+  /* ── Animations ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scan {
+    0%   { top: 0; }
+    50%  { top: calc(100% - 2px); }
+    100% { top: 0; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge">SVM · RBF Kernel · HOG Features</div>
+    <h1>Dress<span>Check</span></h1>
+    <p class="subtitle">Upper garment compliance detection &nbsp;/&nbsp; Group 11 · BSCPE 4-1</p>
+  </header>
+
+  <!-- Upload zone -->
+  <div class="upload-card" id="dropZone">
+    <div class="upload-icon">
+      <svg viewBox="0 0 24 24" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+      </svg>
+    </div>
+    <p class="upload-label">Upload garment image</p>
+    <p class="upload-sub">JPG, PNG, WEBP &nbsp;·&nbsp; Click or drag & drop</p>
+    <input type="file" id="fileInput" accept="image/*"/>
+
+    <!-- Preview -->
+    <div class="preview-wrap" id="previewWrap">
+      <img id="preview" src="" alt="Preview"/>
+      <div class="scan-line" id="scanLine"></div>
+    </div>
+  </div>
+
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+    ▶ &nbsp; Analyze Compliance
+  </button>
+
+  <!-- Error -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header" id="resultHeader">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-badge" id="resultBadge"></div>
+    </div>
+    <div class="result-stats" id="resultStats">
+      <div class="stat-item">
+        <label>Confidence</label>
+        <div class="val" id="confVal"></div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar">
+            <div class="conf-bar-fill" id="confFill"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Verdict</label>
+        <div class="val" id="verdictVal"></div>
+      </div>
+    </div>
+    <button class="reset-btn" onclick="reset()">↺ &nbsp; Check another image</button>
+  </div>
+
+  <footer>
+    Lorzano &nbsp;<span>·</span>&nbsp; Naval &nbsp;<span>·</span>&nbsp; Recote<br/>
+    PUP Dept. of Computer Engineering · Machine Learning
+  </footer>
+
+</div>
+
+<script>
+  const fileInput   = document.getElementById('fileInput');
+  const dropZone    = document.getElementById('dropZone');
+  const previewWrap = document.getElementById('previewWrap');
+  const preview     = document.getElementById('preview');
+  const analyzeBtn  = document.getElementById('analyzeBtn');
+  const resultCard  = document.getElementById('resultCard');
+  const resultHeader= document.getElementById('resultHeader');
+  const resultLabel = document.getElementById('resultLabel');
+  const resultBadge = document.getElementById('resultBadge');
+  const confVal     = document.getElementById('confVal');
+  const confFill    = document.getElementById('confFill');
+  const verdictVal  = document.getElementById('verdictVal');
+  const toast       = document.getElementById('toast');
+  const scanLine    = document.getElementById('scanLine');
+
+  let selectedFile = null;
+
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadFile(file);
+  });
+
+  function loadFile(file) {
+    selectedFile = file;
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    previewWrap.style.display = 'block';
+    analyzeBtn.classList.add('visible');
+    hideError();
+    resultCard.classList.remove('visible');
+  }
+
+  async function analyze() {
+    if (!selectedFile) return;
+
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = '⟳  Scanning…';
+    previewWrap.classList.add('scanning');
+    hideError();
+    resultCard.classList.remove('visible');
+
+    const form = new FormData();
+    form.append('image', selectedFile);
+
+    try {
+      const res = await fetch('/api/predict', { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
+      showResult(data);
+    } catch (err) {
+      showError(err.message || 'Prediction failed. Please try again.');
+    } finally {
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = '▶  Analyze Compliance';
+      previewWrap.classList.remove('scanning');
+    }
+  }
+
+  function showResult(data) {
+    const isPass = data.compliant;
+    const cls    = isPass ? 'pass' : 'fail';
+
+    resultHeader.className = 'result-header ' + cls;
+    resultLabel.textContent = data.label;
+    resultBadge.textContent = isPass ? 'PASS' : 'FAIL';
+
+    confVal.textContent  = data.confidence + '%';
+    verdictVal.textContent = isPass ? 'Allowed ✓' : 'Violation ✗';
+
+    // Reset then animate bar
+    confFill.style.width = '0';
+    confFill.className   = 'conf-bar-fill';
+
+    resultCard.classList.add('visible');
+
+    // Trigger bar fill after paint
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        confFill.style.width = data.confidence + '%';
+      }, 80);
+    });
+  }
+
+  function showError(msg) {
+    toast.textContent = '⚠ ' + msg;
+    toast.classList.add('visible');
+  }
+
+  function hideError() {
+    toast.classList.remove('visible');
+  }
+
+  function reset() {
+    selectedFile = null;
+    fileInput.value = '';
+    preview.src = '';
+    previewWrap.style.display = 'none';
+    analyzeBtn.classList.remove('visible');
+    resultCard.classList.remove('visible');
+    hideError();
+  }
+</script>
+</body>
+</html>
