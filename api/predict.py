@@ -19,9 +19,17 @@ def get_models():
     global _model, _scaler
     if _model is None:
         base = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models')
-        with open(os.path.join(base, 'svm_model.pkl'), 'rb') as f:
+        model_path = os.path.join(base, 'svm_model.pkl')
+        scaler_path = os.path.join(base, 'scaler.pkl')
+
+        missing = [path for path in (model_path, scaler_path) if not os.path.exists(path)]
+        if missing:
+            names = ', '.join(os.path.basename(path) for path in missing)
+            raise FileNotFoundError(f'Missing model file(s): {names}. Add them to the models folder before deploying.')
+
+        with open(model_path, 'rb') as f:
             _model = pickle.load(f)
-        with open(os.path.join(base, 'scaler.pkl'), 'rb') as f:
+        with open(scaler_path, 'rb') as f:
             _scaler = pickle.load(f)
     return _model, _scaler
 
@@ -48,7 +56,9 @@ def _cors(response):
     return response
 
 
+@app.route('/', methods=['POST', 'OPTIONS'])
 @app.route('/api/predict', methods=['POST', 'OPTIONS'])
+@app.route('/api/predict.py', methods=['POST', 'OPTIONS'])
 def predict():
     if request.method == 'OPTIONS':
         return _cors(jsonify({}))

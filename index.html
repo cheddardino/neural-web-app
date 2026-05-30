@@ -495,6 +495,11 @@
   });
 
   function loadFile(file) {
+    if (!file.type.startsWith('image/')) {
+      showError('Please upload a valid image file.');
+      return;
+    }
+
     selectedFile = file;
     const url = URL.createObjectURL(file);
     preview.src = url;
@@ -518,9 +523,11 @@
 
     try {
       const res = await fetch('/api/predict', { method: 'POST', body: form });
-      const data = await res.json();
+      const data = await readPredictionResponse(res);
 
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Prediction failed. Please try again.');
+      }
 
       showResult(data);
     } catch (err) {
@@ -530,6 +537,21 @@
       analyzeBtn.textContent = '▶  Analyze Compliance';
       previewWrap.classList.remove('scanning');
     }
+  }
+
+  async function readPredictionResponse(res) {
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      return res.json();
+    }
+
+    const body = await res.text();
+    const details = body.trim().startsWith('<')
+      ? 'The prediction API returned an HTML page instead of JSON. Please check the Vercel function deployment.'
+      : body.trim();
+
+    throw new Error(details || 'The prediction API returned an empty response.');
   }
 
   function showResult(data) {
