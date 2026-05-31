@@ -4,5 +4,7 @@ __pycache__/
 .env
 .vercel
 venv/
+.venv/
+Midterm Dataset/
 .DS_Store
 .env*.local
