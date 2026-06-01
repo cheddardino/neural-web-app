@@ -1,6 +1,6 @@
 """
 api/predict.py
-Dress Code Compliance — SVM Inference Endpoint
+Government Employee Attire Compliance — SVM Inference Endpoint
 """
 
 from flask import Flask, request, jsonify

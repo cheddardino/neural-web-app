@@ -2,7 +2,7 @@
 
 ## Overview
 
-DressCheck is a web-based dress code compliance checker for upper-garment images. A user uploads an image, the system analyzes it using a trained HOG + SVM model, and the website returns whether the image is classified as `Compliant` or `Non-Compliant`.
+DressCheck is a web-based government employee attire compliance checker for upper-garment images. A user uploads an image, the system analyzes it using a trained HOG + SVM model, and the website returns whether the image is classified as `Compliant` or `Non-Compliant`.
 
 This manual is intended for project presentation, demonstration, and basic user guidance.
 
@@ -11,7 +11,7 @@ This manual is intended for project presentation, demonstration, and basic user 
 For website users:
 
 - A modern web browser such as Chrome, Edge, Safari, or Firefox
-- An image file of an upper garment or outfit
+- An image file of a government employee upper garment or outfit
 - Supported image formats: JPG, PNG, WEBP, and other browser-supported image files
 
 For local developers or presenters:
@@ -36,7 +36,7 @@ For local developers or presenters:
 1. Open the DressCheck website.
 2. Click the upload area labeled `Upload garment image`, or drag and drop an image into the upload area.
 3. Confirm that the image preview appears on the page.
-4. Click `Analyze Compliance`.
+4. Click `Analyze Attire`.
 5. Wait for the scan to finish.
 6. Review the result card.
 
@@ -57,7 +57,7 @@ After a prediction appears:
 
 1. Click `Check another image`.
 2. Upload or drag another image.
-3. Click `Analyze Compliance` again.
+3. Click `Analyze Attire` again.
 
 ## Recommended Image Input
 
@@ -144,7 +144,7 @@ The system depends on the training dataset and learned image patterns. Try using
 
 - Show the dataset folders and class counts.
 - Open `DressCheck_Training_Notebook.ipynb` and explain the training workflow.
-- Show the website interface.
+- Show the website interface for government employee attire checking.
 - Upload a sample compliant image.
 - Upload a sample non-compliant image.
 - Show this user manual as project documentation.
@@ -154,4 +154,4 @@ The system depends on the training dataset and learned image patterns. Try using
 - The model is trained on a limited image dataset.
 - It may not generalize perfectly to all clothing styles, camera angles, or lighting conditions.
 - It checks visual similarity based on image features, not official human judgment.
-- It should be used as a project prototype, not as a final authority for dress code enforcement.
+- It should be used as a project prototype, not as a final authority for government employee dress code enforcement.

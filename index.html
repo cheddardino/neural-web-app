@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>DressCheck — Compliance Classifier</title>
+<title>DressCheck — Government Employee Attire Classifier</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
@@ -398,7 +398,7 @@
   <header>
     <div class="badge">SVM · RBF Kernel · HOG Features</div>
     <h1>Dress<span>Check</span></h1>
-    <p class="subtitle">Upper garment compliance detection &nbsp;/&nbsp; Group 11 · BSCPE 4-1</p>
+    <p class="subtitle">Government employee attire compliance detection &nbsp;/&nbsp; Group 11 · BSCPE 4-1</p>
   </header>
 
   <!-- Upload zone -->
@@ -421,7 +421,7 @@
   </div>
 
   <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
-    ▶ &nbsp; Analyze Compliance
+    ▶ &nbsp; Analyze Attire
   </button>
 
   <!-- Error -->
@@ -453,7 +453,7 @@
 
   <footer>
     Lorzano &nbsp;<span>·</span>&nbsp; Madriaga &nbsp;<span>·</span>&nbsp; Naval &nbsp;<span>·</span>&nbsp; Recote<br/>
-    PUP Dept. of Computer Engineering · Machine Learning
+    Government Employee Dress Code Study · Machine Learning
   </footer>
 
 </div>
@@ -534,7 +534,7 @@
       showError(err.message || 'Prediction failed. Please try again.');
     } finally {
       analyzeBtn.disabled = false;
-      analyzeBtn.textContent = '▶  Analyze Compliance';
+      analyzeBtn.textContent = '▶  Analyze Attire';
       previewWrap.classList.remove('scanning');
     }
   }
